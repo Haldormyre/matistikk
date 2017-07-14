@@ -119,6 +119,7 @@
             <div class="sk-cube sk-cube9"></div>
         </div>
         <div class="col-md-6 col-centered" style="position: absolute; top: 75%; left: 25%;">
+
             <div class="progress progressbar">
                 <div id="progressbar" class="progress-bar progress-bar-success progress-bar-striped" role="progressbar"
                      aria-valuenow="0%" aria-valuemin="0" aria-valuemax="{{ object_list.count }}" style="width:0%">
@@ -140,7 +141,7 @@
                             <span id="taskcount" hidden>{{ test.task_collection.items.all.count }}</span>
                         {% endif %}
                         {% if item.task.extra %}
-                            <div class="col-md-6 col-sm-6 col-xs-6" id="geogebradiv">
+                            <div class="col-md-6 col-sm-6 col-xs-6 col-lg-6 splitdiv" id="geogebradiv">
                                 {% get_geogebra_task item.task as geogebratask %}
                                 <input id="base64{{ forloop.counter }}" type="text"
                                        data-variables="{{ item.variables }}" data-height="{{ geogebratask.height }}"
@@ -152,7 +153,7 @@
                                        value="{{ geogebratask.base64 }}" hidden>
                                 <div id="applet_container{{ forloop.counter }}"></div>
                             </div>
-                            <div class="col-md-6 col-sm-6 col-xs-6">
+                            <div class="col-md-6 col-sm-6 col-xs-6 col-lg-6 splitdiv">
                                 <div class="panel panel-default">
                                     <div class="panel-heading" id="tasktextdiv">
                                         <textarea id="tasktext{{ item.id }}">
@@ -164,7 +165,7 @@
                                             {% endif %}
                                         </textarea>
                                     </div>
-                                    <div class="panel-body">
+                                    <div class="panel-body answerbody">
                                         <textarea id="geolistener{{ forloop.counter }}" rows="6" hidden></textarea>
                                         <input type="text" id="tasktimer{{ forloop.counter }}" hidden>
                                         {% if item.task.answertype == 1 %}
@@ -222,14 +223,14 @@
                             </div>
                         {% else %}
                             <div class="col-md-2"></div>
-                            <div class="col-md-8 col-sm-12 col-xs-12">
+                            <div class="col-md-8 col-sm-12 col-xs-12 fulldiv">
                                 <div class="panel panel-default">
                                     <div class="panel-heading" id="tasktextdiv">
                                         <textarea id="tasktext{{ item.id }}">
                                             <h4>{{ item.task.text | safe }}</h4>
                                         </textarea>
                                     </div>
-                                    <div class="panel-body">
+                                    <div class="panel-body answerbody">
                                         <textarea id="geolistener{{ forloop.counter }}" rows="6" hidden></textarea>
                                         <input type="text" id="tasktimer{{ forloop.counter }}" hidden>
                                         {% if item.task.answertype == 1 %}
@@ -291,7 +292,7 @@
             </div>
             {% if forloop.last %}
                 <div class="section" data-anchor="summary2">
-                    <div id="summary" class="col-xs-12 container-fluid" style="min-height: 100vh">
+                    <div id="summary" class="col-xs-12 col-md-12 col-sm-12 container-fluid" style="min-height: 100vh">
                         <div class="panel panel-info">
                             <div class="panel-heading" style="padding-top: 1px">
                                 <h3 class="text-center">Oppsummering</h3>
@@ -327,7 +328,7 @@
     {% else %}
         {% for taskorder in test.taskorder_set.all %}
             <div class="section" data-anchor="oppgave{{ forloop.counter }}">
-                <div id="task{{ forloop.counter }}" class="col-xs-12 container-fluid"
+                <div id="task{{ forloop.counter }}" class="col-xs-12 col-md-12 col-sm-12 container-fluid"
                      data-itemid="{{ taskorder.item.id }}">
                     <div class="panel panel-info">
                         <div class="panel-heading" style="padding-top: 1px;">
@@ -347,13 +348,12 @@
                                    data-enableShiftDragZoom="{{ geogebratask.enableShiftDragZoom }}"
                                    data-enableRightClick="{{ geogebratask.enableRightClick }}"
                                    value="{{ geogebratask.base64 }}" hidden>
-                            <div class="col-md-6 col-sm-6 col-xs-6">
+                            <div class="col-md-6 col-sm-6 col-xs-6 col-lg-6 splitdiv">
                                 <div id="applet_container{{ forloop.counter }}"></div>
                             </div>
-                            <div class="col-md-6 col-sm-6 col-xs-6">
+                            <div class="col-md-6 col-sm-6 col-xs-6 col-lg-6 splitdiv">
                                 <div class="panel panel-default">
-                                    <div class="panel-heading" style="max-height: 30vh; overflow: auto"
-                                         id="tasktextdiv">
+                                    <div class="panel-heading" id="tasktextdiv">
                                         <textarea id="tasktext{{ taskorder.item.id }}" style="cursor:pointer;">
                                             {% if taskorder.item.task.variableTask %}
                                                 {% insert_params taskorder.item.task.text taskorder.item.variables as text %}
@@ -363,7 +363,7 @@
                                             {% endif %}
                                         </textarea>
                                     </div>
-                                    <div class="panel-body">
+                                    <div class="panel-body answerbody">
                                         <textarea id="geolistener{{ forloop.counter }}" rows="6" hidden></textarea>
                                         <input type="text" id="tasktimer{{ forloop.counter }}" hidden>
                                         {% if taskorder.item.task.answertype == 1 %}
@@ -423,15 +423,15 @@
                                 </div>
                             </div>
                         {% else %}
-                            <div class="col-md-2"></div>
-                            <div class="col-md-8 col-sm-12 col-xs-12">
+                            <div class="col-md-2 fulldiv"></div>
+                            <div class="col-md-8 col-sm-12 col-xs-12 fulldiv">
                                 <div class="panel panel-default">
                                     <div class="panel-heading" id="tasktextdiv">
                                         <textarea id="tasktext{{ taskorder.item.id }}">
                                             <h4>{{ taskorder.item.task.text | safe }}</h4>
                                         </textarea>
                                     </div>
-                                    <div class="panel-body">
+                                    <div class="panel-body answerbody">
                                         <textarea id="geolistener{{ forloop.counter }}" rows="6" hidden></textarea>
                                         <input type="text" id="tasktimer{{ forloop.counter }}" hidden>
                                         {% if taskorder.item.task.answertype == 1 %}
@@ -984,7 +984,8 @@
         var panelHeight = $('.panel-heading').height();
         var navbarHeight = 50;
         var colHeight = window.innerHeight - panelHeight - navbarHeight;
-        $('.col-md-6').css('height', colHeight + 'px');
+        $('.fulldiv').css('height', colHeight + 'px');
+        $('.splitdiv').css('height', colHeight + 'px');
     }
 
     window.onresize = function (event) {
