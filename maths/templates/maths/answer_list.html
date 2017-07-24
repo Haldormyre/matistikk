@@ -433,10 +433,15 @@
             var itemid = div.data('itemid');
             var variables = geo.data('variables');
             if (variables) {
-                var variableTable = variables.split('|||||');
-                for (var x = 0; x < variableTable.length; x++) {
-                    var param = variableTable[x];
-                    window["ggbApplet" + i].setValue('matistikkParameter' + parseInt(x + 1), param);
+                var variableCount = window["ggbApplet" + i].getValue('matistikkAntall');
+                if (variableCount > 1) {
+                    var variableTable = variables.split('|||||');
+                    for (var x = 0; x < variableTable.length; x++) {
+                        var param = variableTable[x];
+                        window["ggbApplet" + i].setValue('matistikkParameter' + parseInt(x + 1), param);
+                    }
+                } else {
+                    window["ggbApplet" + i].setValue('matistikkParameter1', variables);
                 }
                 var html = $.parseHTML(tinymce.get('tasktext' + itemid).getContent());
                 $(html).find(".mathquill-rendered-math .selectable").each(function () {
@@ -453,7 +458,6 @@
                     }
                 });
                 tinymce.get('tasktext' + itemid).setContent(text);
-                window["ggbApplet" + i].refreshViews();
             }
             if (document.getElementById('base64' + i)) {
                 width = geo.data('width');
@@ -520,12 +524,24 @@
             lockAnchors: true,
             scrollingSpeed: 1,
             scrollBar: true,
+            afterLoad: function (anchorLink, index) {
+                var task = parseInt(index) - 1;
+                if (document.getElementById('base64' + task)) {
+                    window["ggbApplet" + task].refreshViews();
+                }
+            },
             onLeave: function (index, nextIndex, direction) {
                 if (!geoFinished) {
                     return false;
                 }
                 onLeave = true;
-                $('#taskBtnList').scrollTo(document.getElementById("liOppgave" + parseInt(nextIndex - 1)));
+                if (nextIndex > 3) {
+                    $('#taskBtnList').scrollTo(document.getElementById("liOppgave" + parseInt(nextIndex - 3)));
+                } else if (nextIndex == 3) {
+                    $('#taskBtnList').scrollTo(document.getElementById("liOppgave" + parseInt(nextIndex - 2)));
+                } else {
+                    $('#taskBtnList').scrollTo(document.getElementById("liOppgave" + parseInt(nextIndex - 1)));
+                }
                 var numTasks = $('.section').length;
                 if (nextIndex == 2) {
                     $('#nextTaskBtn').attr('disabled', false);
