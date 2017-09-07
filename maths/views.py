@@ -2,9 +2,9 @@ from django.views import generic
 from django.contrib import messages
 from braces.views import LoginRequiredMixin
 from django.core.urlresolvers import reverse_lazy, reverse
-from .forms import CreateTaskForm, CreateCategoryForm, CreateTestForm, CreateAnswerForm
+from .forms import CreateTaskForm, CreateCategoryForm, CreateTestForm, CreateAnswerForm, CreateTaskLog
 from .models import Task, MultipleChoiceTask, Category, GeogebraTask, Test, TaskOrder, TaskCollection, Answer, \
-    GeogebraAnswer, Item, MultipleChoiceOption
+    GeogebraAnswer, Item, MultipleChoiceOption, InputFieldTask, InputField, Directory, TaskLog
 from braces import views
 from django.http import JsonResponse
 from administration.models import Grade, Person, Gruppe, School
@@ -12,7 +12,6 @@ import json
 from django.db.models import Q
 import django_excel as excel
 from administration.views import AdministratorCheck, RoleCheck
-import datetime
 import random
 from django.http import HttpResponseRedirect
 
@@ -157,7 +156,20 @@ class TaskCreateView(AdministratorCheck, generic.CreateView):
     login_url = reverse_lazy('login')
     template_name = 'maths/task_form.html'
     form_class = CreateTaskForm
-    success_url = reverse_lazy('maths:taskList')
+    success_url = reverse_lazy('maths:directoryRoot')
+
+    def get_initial(self):
+        if self.kwargs.get('directory_pk'):
+            data = {
+                'directory': self.kwargs.get('directory_pk')
+            }
+            return data
+        else:
+            directory = Directory.objects.get(parent_directory=None)
+            data = {
+                'directory': directory.id
+            }
+            return data
 
     def get_context_data(self, **kwargs):
         """
@@ -181,6 +193,9 @@ class TaskCreateView(AdministratorCheck, generic.CreateView):
         :return: calls super with the new form.
         """
         task = form.save(commit=False)
+        self.success_url = reverse_lazy('maths:directoryDetail', kwargs={
+            'directory_pk': task.directory.id
+        })
         task.author = self.request.user
         messages.success(self.request, 'Oppgave med navnet: ' + task.title + " ble opprettet.")
         variable_task = self.request.POST['variables']
@@ -219,6 +234,32 @@ class TaskCreateView(AdministratorCheck, generic.CreateView):
                 option_split.pop(0)
                 correct_split.pop(0)
                 x += 1
+        elif task.answertype == 4:
+            input_questions = form.cleaned_data['inputQuestion']
+            inputfield = form.cleaned_data['inputField']
+            inputlength = form.cleaned_data['inputLength']
+            inputcorrect = form.cleaned_data['inputCorrect']
+            inputfraction = form.cleaned_data['inputFraction']
+            inputfield_split = inputfield.split('<--->')
+            inputlength_split = inputlength.split('<--->')
+            inputcorrect_split = inputcorrect.split('<--->')
+            inputfraction_split = inputfraction.split('<--->')
+            input_questions_split = input_questions.split('|||||')
+            x = 1
+            for i in range(0, len(input_questions_split)):
+                inputfieldtask = InputFieldTask(task=task, question=input_questions_split[i])
+                inputfieldtask.save()
+                inputfields = inputfield_split[i].split('|||||')
+                input_length = inputlength_split[i].split('|||||')
+                input_correct = inputcorrect_split[i].split('|||||')
+                input_fraction = inputfraction_split[i].split('|||||')
+                for y in range(0, len(inputfields)):
+                    input = InputField(inputFieldTask=inputfieldtask, title=inputfields[y], inputnr=x,
+                                       correct=input_correct[y], inputlength=input_length[y])
+                    if input_fraction[y] == "1":
+                        input.fraction = True
+                    input.save()
+                    x += 1
         if task.extra:
             base64 = self.request.POST['base64']
             preview = self.request.POST['preview']
@@ -334,6 +375,7 @@ class TaskListView(RoleCheck, views.AjaxResponseMixin, generic.ListView):
             :return: JsonResponse containing the necessary Task information.
         """
         multiplechoice = []
+        inputfield = []
         task_id = request.GET['task_id']
         task = Task.objects.get(id=task_id)
         data = {
@@ -343,7 +385,8 @@ class TaskListView(RoleCheck, views.AjaxResponseMixin, generic.ListView):
             'task_reasoningText': task.reasoningText,
             'task_extra': task.extra,
             'task_answertype': task.answertype,
-            'options': multiplechoice
+            'options': multiplechoice,
+            'inputfields': inputfield
         }
         if task.extra:
             geogebra = GeogebraTask.objects.get(task_id=task_id)
@@ -360,6 +403,23 @@ class TaskListView(RoleCheck, views.AjaxResponseMixin, generic.ListView):
                     'checkbox': choices.checkbox,
                     'options': options
                 })
+        elif task.answertype == 4:
+            inputfieldtasks = InputFieldTask.objects.filter(task=task)
+            for inputfieldtask in inputfieldtasks:
+                fields = []
+                length = []
+                fraction = []
+                inputfields = InputField.objects.filter(inputFieldTask=inputfieldtask)
+                for input in inputfields:
+                    fields.append(input.title)
+                    length.append(input.inputlength)
+                    fraction.append(input.fraction)
+                inputfield.append({
+                    "question": inputfieldtask.question,
+                    "fields": fields,
+                    "length": length,
+                    "fraction": fraction
+                })
         return JsonResponse(data)
 
     def get_context_data(self, **kwargs):
@@ -372,6 +432,7 @@ class TaskListView(RoleCheck, views.AjaxResponseMixin, generic.ListView):
         context = super(TaskListView, self).get_context_data(**kwargs)
         context['categories'] = Category.objects.all()
         context['geogebratask'] = GeogebraTask.objects.all()
+        context['form'] = CreateTaskLog()
         return context
 
 
@@ -453,7 +514,7 @@ class TaskUpdateView(AdministratorCheck, generic.UpdateView):
     model = Task
     form_class = CreateTaskForm
     pk_url_kwarg = 'task_pk'
-    success_url = reverse_lazy('maths:taskList')
+    success_url = reverse_lazy('maths:directoryRoot')
 
     def get_initial(self):
         """
@@ -499,6 +560,9 @@ class TaskUpdateView(AdministratorCheck, generic.UpdateView):
             :return: calls super with the new form.
         """
         task = form.save(commit=False)
+        self.success_url = reverse_lazy('maths:directoryDetail', kwargs={
+            'directory_pk': task.directory.id
+        })
         if self.request.POST.get('create_new', False):
             task.pk = None
             task.save()
@@ -562,6 +626,36 @@ class TaskUpdateView(AdministratorCheck, generic.UpdateView):
                 option_split.pop(0)
                 correct_split.pop(0)
                 x += 1
+        elif task.answertype == 4:
+            created_inputs = InputFieldTask.objects.filter(task=task)
+            created_inputs.delete()
+            input_questions = form.cleaned_data['inputQuestion']
+            inputfield = form.cleaned_data['inputField']
+            inputlength = form.cleaned_data['inputLength']
+            inputcorrect = form.cleaned_data['inputCorrect']
+            inputfraction = form.cleaned_data['inputFraction']
+            inputfield_split = inputfield.split('<--->')
+            inputlength_split = inputlength.split('<--->')
+            inputcorrect_split = inputcorrect.split('<--->')
+            inputfraction_split = inputfraction.split('<--->')
+            input_questions_split = input_questions.split('|||||')
+            x = 1
+            for i in range(0, len(input_questions_split)):
+                inputfieldtask = InputFieldTask(task=task, question=input_questions_split[i])
+                inputfieldtask.save()
+                inputfields = inputfield_split[i].split('|||||')
+                input_length = inputlength_split[i].split('|||||')
+                input_correct = inputcorrect_split[i].split('|||||')
+                input_fraction = inputfraction_split[i].split('|||||')
+                for y in range(0, len(inputfields)):
+                    input = InputField(inputFieldTask=inputfieldtask, title=inputfields[y], inputnr=x,
+                                       inputlength=input_length[y])
+                    if input_correct[y]:
+                        input.correct = input_correct[y]
+                    if input_fraction[y] == "1":
+                        input.fraction = True
+                    input.save()
+                    x += 1
         return super(TaskUpdateView, self).form_valid(form)
 
 
@@ -603,8 +697,12 @@ class TaskCollectionCreateView(AdministratorCheck, views.AjaxResponseMixin, gene
             :return: Returns the updated context
         """
         context = super(TaskCollectionCreateView, self).get_context_data(**kwargs)
+        directory = Directory.objects.get(parent_directory=None)
+        context['directory'] = directory
+        context['sub_directories'] = Directory.objects.filter(parent_directory=directory)
         context['tasks'] = Task.objects.all()
         context['categories'] = Category.objects.all()
+        context['update'] = False
         return context
 
     def form_valid(self, form):
@@ -717,7 +815,52 @@ class TaskCollectionDetailView(AdministratorCheck, views.AjaxResponseMixin, gene
         context = super(TaskCollectionDetailView, self).get_context_data(**kwargs)
         context['categories'] = Category.objects.all()
         context['publishedTests'] = Test.objects.filter(task_collection_id=self.kwargs.get('taskCollection_pk'))
+        context['update'] = Answer.objects.filter(
+            test__task_collection_id=self.kwargs.get('taskCollection_pk')).exists()
         return context
+
+
+class TaskCollectionUpdateView(AdministratorCheck, views.AjaxResponseMixin, generic.UpdateView):
+    template_name = 'maths/taskCollection_form.html'
+    model = TaskCollection
+    fields = ['test_name', 'items']
+    pk_url_kwarg = 'taskCollection_pk'
+
+    def get_ajax(self, request, *args, **kwargs):
+        item_id = request.GET['id']
+        item = Item.objects.get(id=item_id)
+        data = {
+            'id': item.task.id
+        }
+        return JsonResponse(data)
+
+    def get_context_data(self, **kwargs):
+        """
+            Function that adds all the task and category objects to the context.
+
+            :param kwargs: Keyword arguments
+            :return: Returns the updated context
+        """
+        context = super(TaskCollectionUpdateView, self).get_context_data(**kwargs)
+        directory = Directory.objects.get(parent_directory=None)
+        context['directory'] = directory
+        context['sub_directories'] = Directory.objects.filter(parent_directory=directory)
+        context['tasks'] = Task.objects.all()
+        context['categories'] = Category.objects.all()
+        context['update'] = True
+        return context
+
+
+class TaskCollectionDeleteView(AdministratorCheck, generic.DeleteView):
+    model = TaskCollection
+    pk_url_kwarg = 'taskCollection_pk'
+    success_url = reverse_lazy('maths:taskCollectionList')
+
+    def delete(self, request, *args, **kwargs):
+        task_collection = TaskCollection.objects.get(id=self.kwargs.get('taskCollection_pk'))
+        success_message = 'Testen "' + task_collection.test_name + '" ble slettet.'
+        messages.success(self.request, success_message)
+        return super(TaskCollectionDeleteView, self).delete(request, *args, **kwargs)
 
 
 class TestCreateView(AdministratorCheck, views.AjaxResponseMixin, generic.CreateView):
@@ -734,15 +877,6 @@ class TestCreateView(AdministratorCheck, views.AjaxResponseMixin, generic.Create
     """
     form_class = CreateTestForm
     template_name = 'maths/test_form.html'
-
-    def get_success_url(self):
-        """
-        Function that sets the success url.
-        :return: Success url
-        """
-        success = reverse_lazy('maths:taskCollectionDetail',
-                               kwargs={'taskCollection_pk': self.kwargs.get('taskCollection_pk')})
-        return success
 
     def post_ajax(self, request, *args, **kwargs):
         """
@@ -933,7 +1067,10 @@ class AnswerCreateView(AnswerCheck, generic.FormView):
         """
         if test.randomOrder:
             randomtest = sorted(test.task_collection.items.all(), key=lambda x: random.random())
-            context['randomtest'] = randomtest
+            context['items'] = randomtest
+        else:
+            task_order = TaskOrder.objects.filter(test=test)
+            context['items'] = Item.objects.filter(taskorder__in=task_order)
         forms = []
         for z in range(0, len(test.task_collection.items.all())):
             forms.append(CreateAnswerForm(prefix="task" + str(z)))
@@ -978,7 +1115,38 @@ class AnswerCreateView(AnswerCheck, generic.FormView):
                 answer.item = item
             if correct:
                 answer.correct = correct
-            answer.date_answered = datetime.datetime.now()
+            elif answer.item.task.answertype == 4:
+                input_answers = text.split('|||||')
+                inputfield_tasks = InputFieldTask.objects.filter(task=answer.item.task)
+                x = 0
+                score = 0
+                score_tasks = False
+                for inputfield_task in inputfield_tasks:
+                    inputfields = InputField.objects.filter(inputFieldTask=inputfield_task)
+                    for inputfield in inputfields:
+                        if inputfield.correct:
+                            input_answer = input_answers[x].strip()
+                            score_tasks = True
+                            if float(input_answer) == float(inputfield.correct):
+                                score += 1
+                        x += 1
+                if score_tasks:
+                    answer.correct = score
+            if answer.item.task.answertype == 2:
+                score = 0
+                multiplechoice_answer = text.split('<--|-->')
+                count = 0
+                for multiplechoicetask in answer.item.task.multiplechoicetask_set.all():
+                    correct_string = ""
+                    for option in multiplechoicetask.multiplechoiceoption_set.all():
+                        if option.correct:
+                            correct_string += option.option + '|||||'
+                    correct_string = correct_string[:-5]
+                    if multiplechoice_answer[count] == correct_string:
+                        score += 1
+                    count += 1
+                answer.correct = score
+            answer.date_answered = timezone.now()
             answer.save()
             base64 = request.POST["task" + str(y) + "-base64answer"]
             geogebradata = request.POST["task" + str(y) + "-geogebradata"]
@@ -1094,6 +1262,22 @@ class TestListView(RoleCheck, views.AjaxResponseMixin, generic.ListView):
         return context
 
 
+class TestDeleteView(AdministratorCheck, generic.DeleteView):
+    model = Test
+    pk_url_kwarg = 'test_pk'
+    success_message = "Den publiserte testen ble slettet."
+
+    def get_success_url(self):
+        test = Test.objects.get(id=self.kwargs.get('test_pk'))
+        return reverse_lazy('maths:taskCollectionDetail', kwargs={
+            'taskCollection_pk': test.task_collection.id
+        })
+
+    def delete(self, request, *args, **kwargs):
+        messages.success(self.request, self.success_message)
+        return super(TestDeleteView, self).delete(request, *args, **kwargs)
+
+
 class AnswerListView(AnswerCheck, generic.ListView):
     """
     Class that displays a list of answers for all the tasks in a specific test for a specific user.
@@ -1172,7 +1356,8 @@ class ExportData(AdministratorCheck, views.AjaxResponseMixin, generic.TemplateVi
                             geogebra_data = GeogebraAnswer.objects.get(answer=answer).data
                         else:
                             geogebra_data = ""
-                        date_answered = formats.date_format(timezone.localtime(answer.date_answered), "SHORT_DATETIME_FORMAT")
+                        date_answered = formats.date_format(timezone.localtime(answer.date_answered),
+                                                            "SHORT_DATETIME_FORMAT")
                         answer_tab = [user.username, answer.test.__str__(), answer.item.__str__(), answer.text,
                                       answer.reasoning, answer.timespent, answer.correct, date_answered, geogebra_data]
                         data.append(answer_tab)
@@ -1187,7 +1372,8 @@ class ExportData(AdministratorCheck, views.AjaxResponseMixin, generic.TemplateVi
                             geogebra_data = GeogebraAnswer.objects.get(answer=answer).data
                         else:
                             geogebra_data = ""
-                        date_answered = formats.date_format(timezone.localtime(answer.date_answered), "SHORT_DATETIME_FORMAT")
+                        date_answered = formats.date_format(timezone.localtime(answer.date_answered),
+                                                            "SHORT_DATETIME_FORMAT")
                         answer_tab = [answer.user.username, answer.test.__str__(), answer.item.__str__(), answer.text,
                                       answer.reasoning, answer.timespent, answer.correct, date_answered, geogebra_data]
                         data.append(answer_tab)
@@ -1202,7 +1388,8 @@ class ExportData(AdministratorCheck, views.AjaxResponseMixin, generic.TemplateVi
                             geogebra_data = GeogebraAnswer.objects.get(answer=answer).data
                         else:
                             geogebra_data = ""
-                        date_answered = formats.date_format(timezone.localtime(answer.date_answered), "SHORT_DATETIME_FORMAT")
+                        date_answered = formats.date_format(timezone.localtime(answer.date_answered),
+                                                            "SHORT_DATETIME_FORMAT")
                         answer_tab = [answer.user.username, answer.test.__str__(), answer.item.__str__(), answer.text,
                                       answer.reasoning, answer.timespent, answer.correct, date_answered, geogebra_data]
                         data.append(answer_tab)
@@ -1216,7 +1403,8 @@ class ExportData(AdministratorCheck, views.AjaxResponseMixin, generic.TemplateVi
                             geogebra_data = GeogebraAnswer.objects.get(answer=answer).data
                         else:
                             geogebra_data = ""
-                        date_answered = formats.date_format(timezone.localtime(answer.date_answered), "SHORT_DATETIME_FORMAT")
+                        date_answered = formats.date_format(timezone.localtime(answer.date_answered),
+                                                            "SHORT_DATETIME_FORMAT")
                         if answer.user:
                             username = answer.user.username
                         else:
@@ -1230,7 +1418,8 @@ class ExportData(AdministratorCheck, views.AjaxResponseMixin, generic.TemplateVi
                     task = Task.objects.get(id=task_id)
                     answers = Answer.objects.filter(item__task=task).order_by('-id')
                     for answer in answers:
-                        date_answered = formats.date_format(timezone.localtime(answer.date_answered), "SHORT_DATETIME_FORMAT")
+                        date_answered = formats.date_format(timezone.localtime(answer.date_answered),
+                                                            "SHORT_DATETIME_FORMAT")
                         if GeogebraAnswer.objects.filter(answer=answer).exists():
                             geogebra_data = GeogebraAnswer.objects.get(answer=answer).data
                         else:
@@ -1248,7 +1437,8 @@ class ExportData(AdministratorCheck, views.AjaxResponseMixin, generic.TemplateVi
                     item = Item.objects.get(id=item_id)
                     answers = Answer.objects.filter(item=item).order_by('-id')
                     for answer in answers:
-                        date_answered = formats.date_format(timezone.localtime(answer.date_answered), "SHORT_DATETIME_FORMAT")
+                        date_answered = formats.date_format(timezone.localtime(answer.date_answered),
+                                                            "SHORT_DATETIME_FORMAT")
                         if GeogebraAnswer.objects.filter(answer=answer).exists():
                             geogebra_data = GeogebraAnswer.objects.get(answer=answer).data
                         else:
@@ -1434,3 +1624,266 @@ class ExportData(AdministratorCheck, views.AjaxResponseMixin, generic.TemplateVi
         context['tasks'] = Task.objects.all()
         context['items'] = Item.objects.all().order_by('-id')
         return context
+
+
+class DirectoryDetailView(views.AjaxResponseMixin, generic.TemplateView):
+    template_name = 'maths/directory_detail.html'
+
+    def post_ajax(self, request, *args, **kwargs):
+        directory_id = request.POST['id']
+        name = request.POST['name']
+        parent_id = request.POST['parent']
+        if directory_id == "0":
+            directory = Directory(name=name, author=request.user, date_created=timezone.now(),
+                                  parent_directory_id=parent_id)
+            directory.save()
+        else:
+            directory = Directory.objects.get(id=directory_id)
+            directory.name = name
+            directory.save()
+        data = {
+            "id": directory.id
+        }
+        return JsonResponse(data=data)
+
+    def get_ajax(self, request, *args, **kwargs):
+        directory_id = request.GET.get('directory')
+        directory = Directory.objects.get(id=directory_id)
+        sub_directories = Directory.objects.filter(parent_directory=directory)
+        sub_directories_tab = []
+        tasks_tab = []
+        for sub_directory in sub_directories:
+            sub_directory_data = {
+                'id': sub_directory.id,
+                'name': sub_directory.name
+            }
+            sub_directories_tab.append(sub_directory_data)
+        tasks = Task.objects.filter(directory=directory)
+        categories = Category.objects.filter(task__in=tasks).distinct()
+        category_tab = []
+        for category in categories:
+            category_date = {
+                'id': category.id,
+                'name': category.category_title
+            }
+            category_tab.append(category_date)
+        for task in tasks:
+            task_data = {
+                'id': task.id,
+                'title': task.title,
+                'author': task.author.username,
+                'variableTask': task.variableTask,
+                'approved': task.approved
+            }
+            category_str = ""
+            for category in task.category.all():
+                category_str += category.category_title + " - "
+            category_str = category_str[:-3]
+            task_data['categories'] = category_str
+            tasks_tab.append(task_data)
+        data = {
+            'sub_directories': sub_directories_tab,
+            'tasks': tasks_tab,
+            'categories': category_tab
+        }
+        return JsonResponse(data=data)
+
+    def get_context_data(self, **kwargs):
+        context = super(DirectoryDetailView, self).get_context_data(**kwargs)
+        if self.kwargs.get('directory_pk'):
+            directory = Directory.objects.get(id=self.kwargs.get('directory_pk'))
+            bread = []
+            bread.insert(0, directory)
+            parent = True
+            if directory.parent_directory:
+                parent_directory = directory.parent_directory
+                while parent:
+                    if parent_directory:
+                        bread.insert(0, parent_directory)
+                        parent_directory = parent_directory.parent_directory
+                    else:
+                        parent = False
+            context['breadcrumbs'] = bread
+        else:
+            directory = Directory.objects.get(parent_directory=None)
+        tasks = Task.objects.filter(directory=directory)
+        context['directory'] = directory
+        context['tasks'] = tasks
+        context['sub_directories'] = Directory.objects.filter(parent_directory=directory)
+        context['categories'] = Category.objects.filter(task__in=tasks).distinct()
+        context['form'] = CreateTaskLog()
+        return context
+
+
+class DirectoryDelete(views.AjaxResponseMixin, generic.View):
+    def post_ajax(self, request, *args, **kwargs):
+        directory_id = request.POST['id']
+        directory = Directory.objects.get(id=directory_id)
+        parent_id = "0"
+        if directory.parent_directory:
+            parent_id = directory.parent_directory.id
+        if Task.objects.filter(directory=directory).exists() or \
+                Directory.objects.filter(parent_directory=directory).exists():
+            return JsonResponse(data={
+                'deleted': False
+            })
+        else:
+            directory.delete()
+        return JsonResponse(data={
+            'deleted': True,
+            'parent': parent_id
+        })
+
+
+class DirectoryEdit(views.AjaxResponseMixin, generic.View):
+    def post_ajax(self, request, *args, **kwargs):
+        directory_id = request.POST['id']
+        new_name = request.POST['newName']
+        directory = Directory.objects.get(id=directory_id)
+        directory.name = new_name
+        directory.save()
+        return JsonResponse(data={
+            'id': directory.id
+        })
+
+
+class DirectoryMove(views.AjaxResponseMixin, generic.View):
+    def get_ajax(self, request, *args, **kwargs):
+        get_root = request.GET.get('root')
+        if get_root == "true":
+            root = Directory.objects.get(parent_directory=None)
+            directories = Directory.objects.filter(parent_directory=root)
+            child_directories = []
+            for directory in directories:
+                children = Directory.objects.filter(parent_directory=directory)
+                parent = children.exists()
+                child_of_child = []
+                for child in children:
+                    parent_child = Directory.objects.filter(parent_directory=child).exists()
+                    child_data = {
+                        'id': child.id,
+                        'name': child.name,
+                        'parent': parent_child
+                    }
+                    child_of_child.append(child_data)
+                directory_data = {
+                    'id': directory.id,
+                    'name': directory.name,
+                    'parent': parent,
+                    'child': child_of_child
+                }
+                child_directories.append(directory_data)
+            data = {
+                "root_id": root.id,
+                "root_name": root.name,
+                "directories": child_directories
+            }
+            return JsonResponse(data)
+        else:
+            directory_id = request.GET.get('id')
+            directories = Directory.objects.filter(parent_directory_id=directory_id)
+            child_directories = []
+            for directory in directories:
+                children = Directory.objects.filter(parent_directory=directory)
+                parent = children.exists()
+                child_of_child = []
+                for child in children:
+                    parent_child = Directory.objects.filter(parent_directory=child).exists()
+                    child_data = {
+                        'id': child.id,
+                        'name': child.name,
+                        'parent': parent_child
+                    }
+                    child_of_child.append(child_data)
+                directory_data = {
+                    'id': directory.id,
+                    'name': directory.name,
+                    'parent': parent,
+                    'child': child_of_child
+                }
+                child_directories.append(directory_data)
+            return JsonResponse(data={
+                'directories': child_directories
+            })
+
+    def post_ajax(self, request, *args, **kwargs):
+        destination_id = request.POST['destination']
+        tasks_id = request.POST.get('tasks', False)
+        directories_id = request.POST.get('directories', False)
+        if tasks_id:
+            task_tab = tasks_id.split(',')
+            for task_id in task_tab:
+                task = Task.objects.get(id=task_id)
+                task.directory_id = destination_id
+                task.save()
+        if directories_id:
+            directory_tab = directories_id.split(',')
+            for directory_id in directory_tab:
+                directory = Directory.objects.get(id=directory_id)
+                directory.parent_directory_id = destination_id
+                directory.save()
+        destination = Directory.objects.get(id=destination_id)
+        bread = []
+        parent = True
+        bread.insert(0, {
+            'id': destination.id,
+            'name': destination.name
+        })
+        if destination.parent_directory:
+            parent_directory = destination.parent_directory
+            while parent:
+                if parent_directory:
+                    parent_data = {
+                        'id': parent_directory.id,
+                        'name': parent_directory.name
+                    }
+                    bread.insert(0, parent_data)
+                    parent_directory = parent_directory.parent_directory
+                else:
+                    parent = False
+        return JsonResponse(data={
+            'name': destination.name,
+            'path': destination.__str__(),
+            'breadcrumb': bread
+        })
+
+
+class TaskLogView(views.AjaxResponseMixin, generic.View):
+    def get_ajax(self, request, *args, **kwargs):
+        task_id = request.GET.get('task_id')
+        task = Task.objects.get(id=task_id)
+        taskLogs = TaskLog.objects.filter(task=task).order_by('-id')
+        tasklog_list = []
+        for tasklog in taskLogs:
+            tasklog_dir = {
+                'comment': tasklog.text,
+                'author': tasklog.author.get_full_name(),
+                'date': formats.date_format(timezone.localtime(tasklog.date), "SHORT_DATETIME_FORMAT"),
+            }
+            tasklog_list.append(tasklog_dir)
+        return JsonResponse(data={
+            'name': task.title,
+            'logs': tasklog_list
+        })
+
+    def post_ajax(self, request, *args, **kwargs):
+        task_id = request.POST.get('task_id', False)
+        text = request.POST.get('comment', False)
+        approved = request.POST.get('approved', False)
+        task = Task.objects.get(id=task_id)
+        if text == 'approved':
+            if approved == 'true':
+                text = 'Oppgaven er satt som godkjent!'
+                task.approved = True
+            else:
+                text = 'Oppgaven er satt som ikke godkjent!'
+                task.approved = False
+        taskLog = TaskLog(text=text, author=request.user, task=task, date=timezone.now())
+        taskLog.save()
+        task.save()
+        return JsonResponse(data={
+            'author': taskLog.author.get_full_name(),
+            'comment': taskLog.text,
+            'date': formats.date_format(timezone.localtime(taskLog.date), "SHORT_DATETIME_FORMAT"),
+        })
+

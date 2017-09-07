@@ -64,13 +64,9 @@
     <nav id="tasknav" class="navbar navbar-default navbar-fixed-bottom hidden">
         <div class="row">
             <div class="col-centered">
-                <button id="prevTaskBtn" class="btn btn-primary btn-lg border-radius" disabled="disabled" type="button"
-                        onclick="previousTask()"><i class="fa fa-arrow-left"
-                                                    aria-hidden="true"></i>
-                    Forrige oppgave
-                </button>
+
                 <ul id="taskBtnList" class="nav navbar-nav scrollbar"
-                    style="white-space: nowrap; overflow-x: auto; max-width: 30vw">
+                    style="white-space: nowrap; overflow-x: auto; max-width: 70vw">
                     {% for item in test.task_collection.items.all %}
                         <li id="liOppgave{{ forloop.counter }}" data-menuanchor="oppgave{{ forloop.counter }}"
                             style="display: inline-block; float: none;">
@@ -82,20 +78,19 @@
                         <a type="button" onclick="checkTest(); goToTask(0)" style="cursor:pointer;">Oppsummering</a>
                     </li>
                 </ul>
-                <button id="nextTaskBtn" class="btn btn-primary btn-lg border-radius" type="button"
-                        onclick="nextTask()"><span
-                        id="nextTaskBtnText">Neste Oppgave</span> <i
-                        class="fa fa-arrow-right"
-                        aria-hidden="true"></i></button>
-                <ul id="endTestNav" class="nav navbar-nav navbar-right">
-                    <button id="sendBtn" class="btn btn-success btn-lg border-radius" type="button"
-                            onclick="submitTask()"
-                            {% if test.strictOrder or request.user.role == 2 or request.user.role == 3 or request.user.role == 4 %}disabled="disabled"{% endif %}>
-                        Send Inn
+
+                <ul id="endTestNav" class="nav navbar-nav navbar-right" style="margin-right: 5px;">
+                    <button id="prevTaskBtn" class="btn btn-primary btn-lg border-radius" disabled="disabled"
+                            type="button"
+                            onclick="previousTask()"><i class="fa fa-arrow-left"
+                                                        aria-hidden="true"></i>
+                        Forrige oppgave
                     </button>
-                    <a class="btn btn-danger btn-lg pull-right border-radius" data-toggle='modal'
-                       data-target='#exitTestModal' style="margin-right: 20px;">Avbryt
-                        Test</a>
+                    <button id="nextTaskBtn" class="btn btn-primary btn-lg border-radius" type="button"
+                            onclick="nextTask()"><span
+                            id="nextTaskBtnText">Neste Oppgave</span> <i
+                            class="fa fa-arrow-right"
+                            aria-hidden="true"></i></button>
                 </ul>
             </div>
 
@@ -127,56 +122,58 @@
             </div>
         </div>
     </div>
-    {% if test.randomOrder %}
-        {% for item in randomtest %}
-            <div class="section" data-anchor="oppgave{{ forloop.counter }}">
-                <div id="task{{ forloop.counter }}" class="col-xs-12 container-fluid"
-                     data-itemid="{{ item.id }}">
-                    <div class="panel panel-info">
-                        <div class="panel-heading" style="padding-top: 1px;">
-                            <h3 class="text-center">Oppgave {{ forloop.counter }}</h3>
+    {% for item in items %}
+        <div class="section" data-anchor="oppgave{{ forloop.counter }}">
+            <div id="task{{ forloop.counter }}" class="col-xs-12 col-md-12 col-sm-12 container-fluid"
+                 data-itemid="{{ item.id }}">
+                <div class="panel panel-info">
+
+                    {% if forloop.first %}
+                        <span id="geocount" hidden>{% get_geogebra_count test %}</span>
+                        <span id="taskcount" hidden>{{ test.task_collection.items.all.count }}</span>
+                    {% endif %}
+                    {% if item.task.extra %}
+                        {% get_geogebra_task item.task as geogebratask %}
+                        <input id="base64{{ forloop.counter }}" type="text"
+                               data-variables="{{ item.variables }}"
+                               data-height="{{ geogebratask.height }}" data-width="{{ geogebratask.width }}"
+                               data-showMenuBar="{{ geogebratask.showMenuBar }}"
+                               data-enableLabelDrags="{{ geogebratask.enableLabelDrags }}"
+                               data-enableShiftDragZoom="{{ geogebratask.enableShiftDragZoom }}"
+                               data-enableRightClick="{{ geogebratask.enableRightClick }}"
+                               value="{{ geogebratask.base64 }}" hidden>
+                        <div class="col-md-6 col-sm-6 col-xs-6 col-lg-6">
+                            <div id="applet_container{{ forloop.counter }}"></div>
                         </div>
-                        {% if forloop.first %}
-                            <span id="geocount" hidden>{% get_geogebra_count test %}</span>
-                            <span id="taskcount" hidden>{{ test.task_collection.items.all.count }}</span>
-                        {% endif %}
-                        {% if item.task.extra %}
-                            <div class="col-md-6 col-sm-6 col-xs-6 col-lg-6 splitdiv" id="geogebradiv">
-                                {% get_geogebra_task item.task as geogebratask %}
-                                <input id="base64{{ forloop.counter }}" type="text"
-                                       data-variables="{{ item.variables }}" data-height="{{ geogebratask.height }}"
-                                       data-width="{{ geogebratask.width }}"
-                                       data-showMenuBar="{{ geogebratask.showMenuBar }}"
-                                       data-enableLabelDrags="{{ geogebratask.enableLabelDrags }}"
-                                       data-enableShiftDragZoom="{{ geogebratask.enableShiftDragZoom }}"
-                                       data-enableRightClick="{{ geogebratask.enableRightClick }}"
-                                       value="{{ geogebratask.base64 }}" hidden>
-                                <div id="applet_container{{ forloop.counter }}"></div>
-                            </div>
-                            <div class="col-md-6 col-sm-6 col-xs-6 col-lg-6 splitdiv">
-                                <div class="panel panel-default">
-                                    <div class="panel-heading" id="tasktextdiv">
-                                        <textarea id="tasktext{{ item.id }}">
-                                             {% if item.task.variableTask %}
-                                                 {% insert_params item.task.text item.variables as text %}
-                                                 <h4>{{ text | safe }}</h4>
-                                             {% else %}
-                                                 <h4>{{ item.task.text | safe }}</h4>
-                                             {% endif %}
+                        <div class="col-md-6 col-sm-6 col-xs-6 col-lg-6">
+                            <div class="panel panel-default">
+                                <div class="panel-heading" style="padding-top: 1px; padding-bottom: 1px;">
+                                    <h4 class="text-center tasktitle">Oppgave {{ forloop.counter }}</h4>
+                                </div>
+                                <div class="panel-body">
+                                    <div class="" id="tasktextdiv">
+                                        <textarea id="tasktext{{ item.id }}" style="cursor:pointer;">
+                                            {% if item.task.variableTask %}
+                                                {% insert_params item.task.text item.variables as text %}
+                                                {{ text | safe }}
+                                            {% else %}
+                                                {{ item.task.text | safe }}
+                                            {% endif %}
                                         </textarea>
                                     </div>
-                                    <div class="panel-body answerbody">
-                                        <textarea id="geolistener{{ forloop.counter }}" rows="6" hidden></textarea>
-                                        <input type="text" id="tasktimer{{ forloop.counter }}" hidden>
+                                    <textarea id="geolistener{{ forloop.counter }}" rows="6" hidden></textarea>
+                                    <input type="text" id="tasktimer{{ forloop.counter }}" hidden>
+                                    <div id="answerdiv{{ item.id }}" style="overflow: auto;">
                                         {% if item.task.answertype == 1 %}
-                                            <div id="textanswerdiv{{ item.id }}">
-                                                <label for="textanswer">Tekstsvar</label>
-                                                <textarea class="form-control" id="textanswer{{ item.id }}" rows="6"
+                                            <div id="textanswerdiv{{ item.id }}" style="padding-top: 10px;">
+                                                <label for="textanswer{{ item.id }}">Tekstsvar</label>
+                                                <textarea class="form-control" id="textanswer{{ item.id }}"
+                                                          rows="6"
                                                           style="resize:vertical"
                                                           placeholder="Skriv svaret ditt her..."></textarea>
                                             </div>
                                         {% elif item.task.answertype == 2 %}
-                                            <div id="optionsdiv{{ item.id }}">
+                                            <div id="optionsdiv{{ item.id }}" style="padding-top: 10px;">
                                                 {% get_mutiplechoice item.task as multiplechoicetasks %}
                                                 {% for multiplechoicetask in multiplechoicetasks %}
                                                     <div id="{{ item.id }}multipleChoiceAlt{{ forloop.counter }}"
@@ -187,33 +184,85 @@
                                                             <label for=multipleChoice>Svaralternativer:</label>
                                                         {% endif %}
                                                         <br>
-                                                        {% get_multiplechoice_options multiplechoicetask as options %}
-                                                        {% for option in options %}
-                                                            {% if multiplechoicetask.checkbox %}
-                                                                <label class="checkbox-inline"><input type="checkbox"
-                                                                                                      class="checkbox{{ item.id }}"
-                                                                                                      value="{{ option.option }}">{{ option.option }}
-                                                                </label>
+                                                        {% get_multiplechoice_options_length multiplechoicetask as length %}
+                                                        {% for option in multiplechoicetask.multiplechoiceoption_set.all %}
+                                                            {% if length > 50 %}
+                                                                {% if multiplechoicetask.checkbox %}
+                                                                    <div class="checkbox">
+                                                                        <label><input
+                                                                                type="checkbox"
+                                                                                class="checkbox{{ item.id }}"
+                                                                                value="{{ option.option }}">{{ option.option }}
+                                                                        </label>
+                                                                    </div>
+                                                                {% else %}
+                                                                    <div class="radio">
+                                                                        <label><input type="radio"
+                                                                                      value="{{ option.option }}"
+                                                                                      class="checkbox{{ item.id }}"
+                                                                                      name="{{ forloop.parentloop.counter }}choices{{ item.id }}">{{ option.option }}
+                                                                    </div>
+                                                                {% endif %}
                                                             {% else %}
-                                                                <label class="radio-inline"><input type="radio"
-                                                                                                   value="{{ option.option }}"
-                                                                                                   class="checkbox{{ item.id }}"
-                                                                                                   name="{{ forloop.parentloop.counter }}choices{{ item.id }}">{{ option.option }}
-                                                                </label>
+                                                                {% if multiplechoicetask.checkbox %}
+                                                                    <label class="checkbox-inline"><input
+                                                                            type="checkbox"
+                                                                            class="checkbox{{ item.id }}"
+                                                                            value="{{ option.option }}">{{ option.option }}
+                                                                    </label>
+                                                                {% else %}
+                                                                    <label class="radio-inline"><input type="radio"
+                                                                                                       value="{{ option.option }}"
+                                                                                                       class="checkbox{{ item.id }}"
+                                                                                                       name="{{ forloop.parentloop.counter }}choices{{ item.id }}">{{ option.option }}
+                                                                    </label>
+                                                                {% endif %}
                                                             {% endif %}
                                                         {% endfor %}
                                                     </div>
                                                     <hr>
                                                 {% endfor %}
                                             </div>
+                                        {% elif item.task.answertype == 4 %}
+                                            <div id="inputfieldsdiv{{ item.id }}" style="padding-top: 10px;">
+                                                {% get_inputfields item.task as inputfields %}
+                                                {% for inputfield in inputfields %}
+                                                    <h4>{{ inputfield.question }}</h4>
+                                                    <form class="form-horizontal">
+                                                        {% for inputs in inputfield.inputfield_set.all %}
+                                                            <div class="form-group"
+                                                                 style="margin-bottom: {% get_margin inputs.fraction %}px;">
+                                                                <label
+                                                                        style="text-align: left; padding-left: 15px; height: auto"
+                                                                        class="control-label col-md-2">{{ inputs.title }}:</label>
+                                                                <div class="col-md-{{ inputs.inputlength }}"
+                                                                     style="padding-right: 15px; height: auto"><input
+                                                                        type="number"
+                                                                        data-inputnr="{{ inputs.inputnr }}"
+                                                                        data-counter="{{ forloop.parentloop.parentloop.counter }}"
+                                                                        class="form-control inputs">
+                                                                    {% if inputs.fraction %}
+                                                                        <hr style="margin-top: 5px; margin-bottom: 5px; border-top: 2px solid black;">
+                                                                    {% endif %}
+                                                                </div>
+                                                            </div>
+                                                        {% endfor %}
+                                                    </form>
+                                                    {% if not forloop.last or item.task.reasoning %}
+                                                        <hr>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
                                         {% endif %}
 
                                         {% if item.task.reasoning %}
                                             <div id="reasoningdiv{{ item.id }}">
-                                                <label for="reasoning{{ item.id }}">{% if item.task.reasoningText %}
-                                                    {{ item.task.reasoningText }}{% else %}
-                                                    Begrunnelse{% endif %}</label>
-                                                <textarea class="form-control" id="reasoning{{ item.id }}" rows="6"
+                                                <label for="reasoning{{ item.id }}">
+                                                    {% if item.task.reasoningText %}
+                                                        {{ item.task.reasoningText }}{% else %}
+                                                        Begrunnelse{% endif %}</label>
+                                                <textarea class="form-control" id="reasoning{{ item.id }}"
+                                                          rows="6"
                                                           style="resize:vertical"
                                                           placeholder="Begrunn svaret ditt..."></textarea>
                                             </div>
@@ -221,27 +270,34 @@
                                     </div>
                                 </div>
                             </div>
-                        {% else %}
-                            <div class="col-md-2"></div>
-                            <div class="col-md-8 col-sm-12 col-xs-12 fulldiv">
-                                <div class="panel panel-default">
-                                    <div class="panel-heading" id="tasktextdiv">
+                        </div>
+                    {% else %}
+                        <div class="col-md-2 fulldiv"></div>
+                        <div class="col-md-8 col-sm-12 col-xs-12 fulldiv">
+                            <div class="panel panel-default" style="box-shadow: none;">
+                                <div class="panel-heading" style="padding-top: 1px; padding-bottom: 1px;">
+                                    <h4 class="text-center tasktitle">Oppgave {{ forloop.counter }}</h4>
+                                </div>
+                                <div class="panel-body">
+                                    <div id="tasktextdiv">
                                         <textarea id="tasktext{{ item.id }}">
                                             <h4>{{ item.task.text | safe }}</h4>
                                         </textarea>
                                     </div>
-                                    <div class="panel-body answerbody">
-                                        <textarea id="geolistener{{ forloop.counter }}" rows="6" hidden></textarea>
-                                        <input type="text" id="tasktimer{{ forloop.counter }}" hidden>
+                                    <textarea id="geolistener{{ forloop.counter }}" rows="6" hidden></textarea>
+                                    <input type="text" id="tasktimer{{ forloop.counter }}" hidden>
+                                    <div id="answerdiv{{ item.id }}" style="overflow: auto;">
+
                                         {% if item.task.answertype == 1 %}
-                                            <div id="textanswerdiv{{ item.id }}">
-                                                <label for="textanswer{{ item.id }}">Tekstsvar</label>
-                                                <textarea class="form-control" id="textanswer{{ item.id }}" rows="6"
+                                            <div id="textanswerdiv{{ item.id }}" style="padding-top: 10px;>
+                                                <label for="textanswer">Tekstsvar</label>
+                                                <textarea class="form-control" id="textanswer{{ item.id }}"
+                                                          rows="6"
                                                           style="resize:vertical"
                                                           placeholder="Skriv svaret ditt her..."></textarea>
                                             </div>
                                         {% elif item.task.answertype == 2 %}
-                                            <div id="optionsdiv{{ item.id }}">
+                                            <div id="optionsdiv{{ item.id }}" style="padding-top: 10px;">
                                                 {% get_mutiplechoice item.task as multiplechoicetasks %}
                                                 {% for multiplechoicetask in multiplechoicetasks %}
                                                     <div id="{{ item.id }}multipleChoiceAlt{{ forloop.counter }}"
@@ -252,33 +308,84 @@
                                                             <label for=multipleChoice>Svaralternativer:</label>
                                                         {% endif %}
                                                         <br>
-                                                        {% get_multiplechoice_options multiplechoicetask as options %}
-                                                        {% for option in options %}
-                                                            {% if multiplechoicetask.checkbox %}
-                                                                <label class="checkbox-inline"><input type="checkbox"
-                                                                                                      class="checkbox{{ item.id }}"
-                                                                                                      value="{{ option.option }}">{{ option.option }}
-                                                                </label>
+                                                        {% get_multiplechoice_options_length multiplechoicetask as length %}
+                                                        {% for option in multiplechoicetask.multiplechoiceoption_set.all %}
+                                                            {% if length > 50 %}
+                                                                {% if multiplechoicetask.checkbox %}
+                                                                    <div class="checkbox">
+                                                                        <label><input
+                                                                                type="checkbox"
+                                                                                class="checkbox{{ item.id }}"
+                                                                                value="{{ option.option }}">{{ option.option }}
+                                                                        </label>
+                                                                    </div>
+                                                                {% else %}
+                                                                    <div class="radio">
+                                                                        <label><input type="radio"
+                                                                                      value="{{ option.option }}"
+                                                                                      class="checkbox{{ item.id }}"
+                                                                                      name="{{ forloop.parentloop.counter }}choices{{ item.id }}">{{ option.option }}
+                                                                    </div>
+                                                                {% endif %}
                                                             {% else %}
-                                                                <label class="radio-inline"><input type="radio"
-                                                                                                   value="{{ option.option }}"
-                                                                                                   class="checkbox{{ item.id }}"
-                                                                                                   name="{{ forloop.parentloop.counter }}choices{{ item.id }}">{{ option.option }}
-                                                                </label>
+                                                                {% if multiplechoicetask.checkbox %}
+                                                                    <label class="checkbox-inline"><input
+                                                                            type="checkbox"
+                                                                            class="checkbox{{ item.id }}"
+                                                                            value="{{ option.option }}">{{ option.option }}
+                                                                    </label>
+                                                                {% else %}
+                                                                    <label class="radio-inline"><input type="radio"
+                                                                                                       value="{{ option.option }}"
+                                                                                                       class="checkbox{{ item.id }}"
+                                                                                                       name="{{ forloop.parentloop.counter }}choices{{ item.id }}">{{ option.option }}
+                                                                    </label>
+                                                                {% endif %}
                                                             {% endif %}
                                                         {% endfor %}
                                                     </div>
                                                     <hr>
                                                 {% endfor %}
                                             </div>
-                                        {% endif %}
+                                        {% elif item.task.answertype == 4 %}
+                                            <div id="inputfieldsdiv{{ item.id }}" style="padding-top: 10px;">
+                                                {% get_inputfields item.task as inputfields %}
+                                                {% for inputfield in inputfields %}
+                                                    <h4>{{ inputfield.question }}</h4>
+                                                    <form class="form-horizontal">
+                                                        {% for inputs in inputfield.inputfield_set.all %}
+                                                            <div class="form-group"
+                                                                 style="margin-bottom: {% get_margin inputs.fraction %}px;">
+                                                                <label
+                                                                        style="text-align: left; padding-left: 15px; height: auto"
+                                                                        class="control-label col-md-2">{{ inputs.title }}</label>
+                                                                <div class="col-md-{{ inputs.inputlength }}"
+                                                                     style="padding-right: 15px; height: auto"><input
+                                                                        type="number"
+                                                                        data-inputnr="{{ inputs.inputnr }}"
+                                                                        data-counter="{{ forloop.parentloop.parentloop.counter }}"
+                                                                        class="form-control inputs">
 
+                                                                    {% if inputs.fraction %}
+                                                                        <hr style="margin-top: 5px; margin-bottom: 5px; border-top: 2px solid black;">
+                                                                    {% endif %}
+                                                                </div>
+                                                            </div>
+                                                        {% endfor %}
+                                                    </form>
+                                                    {% if not forloop.last or item.task.reasoning %}
+                                                        <hr>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
                                         {% if item.task.reasoning %}
                                             <div id="reasoningdiv{{ item.id }}">
-                                                <label for="reasoning{{ item.id }}">{% if item.task.reasoningText %}
+                                                <label for="reasoning">{% if item.task.reasoningText %}
                                                     {{ item.task.reasoningText }}{% else %}
                                                     Begrunnelse{% endif %}</label>
-                                                <textarea class="form-control" id="reasoning{{ item.id }}" rows="6"
+                                                <textarea class="form-control" id="reasoning{{ item.id }}"
+                                                          rows="6"
                                                           style="resize:vertical"
                                                           placeholder="Begrunn svaret ditt..."></textarea>
                                             </div>
@@ -286,250 +393,46 @@
                                     </div>
                                 </div>
                             </div>
-                        {% endif %}
-                    </div>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
-            {% if forloop.last %}
-                <div class="section" data-anchor="summary2">
-                    <div id="summary" class="col-xs-12 col-md-12 col-sm-12 container-fluid" style="min-height: 100vh">
-                        <div class="panel panel-info">
-                            <div class="panel-heading" style="padding-top: 1px">
-                                <h3 class="text-center">Oppsummering</h3>
-                            </div>
-                            <div class="panel-body" style="max-height: 80vh; overflow: auto">
-                                <table class="table table-hover table-striped table-responsive" id="summarytable">
-                                    <thead>
-                                    <tr>
-                                        <th class="col-xs-2">Oppgave</th>
-                                        <th class="col-xs-8">Status</th>
-                                        <th class="col-xs-2">Gå til</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody class="tableBody">
-                                    {% for item in randomtest %}
-                                        <tr id="summarytask{{ item.id }}">
-                                            <td>Oppgave {{ forloop.counter }}</td>
-                                            <td id="status{{ item.id }}">Status</td>
-                                            <td><a type="button" class="btn btn-default"
-                                                   onclick="goToTask({{ forloop.counter }})"><i
-                                                    class="fa fa-arrow-right" aria-hidden="true"></i> Gå til oppgave</a>
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            {% endif %}
-        {% endfor %}
-    {% else %}
-        {% for taskorder in test.taskorder_set.all %}
-            <div class="section" data-anchor="oppgave{{ forloop.counter }}">
-                <div id="task{{ forloop.counter }}" class="col-xs-12 col-md-12 col-sm-12 container-fluid"
-                     data-itemid="{{ taskorder.item.id }}">
+        </div>
+        {% if forloop.last %}
+            <div class="section" data-anchor="summary2">
+                <div id="summary" class="col-xs-12 container-fluid">
                     <div class="panel panel-info">
-                        <div class="panel-heading" style="padding-top: 1px;">
-                            <h3 class="text-center">Oppgave {{ forloop.counter }}</h3>
+                        <div class="panel-heading" style="padding-top: 1px">
+                            <h3 class="text-center">Oppsummering</h3>
                         </div>
-                        {% if forloop.first %}
-                            <span id="geocount" hidden>{% get_geogebra_count test %}</span>
-                            <span id="taskcount" hidden>{{ test.task_collection.items.all.count }}</span>
-                        {% endif %}
-                        {% if taskorder.item.task.extra %}
-                            {% get_geogebra_task taskorder.item.task as geogebratask %}
-                            <input id="base64{{ forloop.counter }}" type="text"
-                                   data-variables="{{ taskorder.item.variables }}"
-                                   data-height="{{ geogebratask.height }}" data-width="{{ geogebratask.width }}"
-                                   data-showMenuBar="{{ geogebratask.showMenuBar }}"
-                                   data-enableLabelDrags="{{ geogebratask.enableLabelDrags }}"
-                                   data-enableShiftDragZoom="{{ geogebratask.enableShiftDragZoom }}"
-                                   data-enableRightClick="{{ geogebratask.enableRightClick }}"
-                                   value="{{ geogebratask.base64 }}" hidden>
-                            <div class="col-md-6 col-sm-6 col-xs-6 col-lg-6 splitdiv">
-                                <div id="applet_container{{ forloop.counter }}"></div>
-                            </div>
-                            <div class="col-md-6 col-sm-6 col-xs-6 col-lg-6 splitdiv">
-                                <div class="panel panel-default">
-                                    <div class="panel-heading" id="tasktextdiv">
-                                        <textarea id="tasktext{{ taskorder.item.id }}" style="cursor:pointer;">
-                                            {% if taskorder.item.task.variableTask %}
-                                                {% insert_params taskorder.item.task.text taskorder.item.variables as text %}
-                                                <h4>{{ text | safe }}</h4>
-                                            {% else %}
-                                                <h4>{{ taskorder.item.task.text | safe }}</h4>
-                                            {% endif %}
-                                        </textarea>
-                                    </div>
-                                    <div class="panel-body answerbody">
-                                        <textarea id="geolistener{{ forloop.counter }}" rows="6" hidden></textarea>
-                                        <input type="text" id="tasktimer{{ forloop.counter }}" hidden>
-                                        {% if taskorder.item.task.answertype == 1 %}
-                                            <div id="textanswerdiv{{ taskorder.item.id }}">
-                                                <label for="textanswer{{ taskorder.item.id }}">Tekstsvar</label>
-                                                <textarea class="form-control" id="textanswer{{ taskorder.item.id }}"
-                                                          rows="6"
-                                                          style="resize:vertical"
-                                                          placeholder="Skriv svaret ditt her..."></textarea>
-                                            </div>
-                                        {% elif taskorder.item.task.answertype == 2 %}
-                                            <div id="optionsdiv{{ taskorder.item.id }}">
-                                                {% get_mutiplechoice taskorder.item.task as multiplechoicetasks %}
-                                                {% for multiplechoicetask in multiplechoicetasks %}
-                                                    <div id="{{ taskorder.item.id }}multipleChoiceAlt{{ forloop.counter }}"
-                                                         class="multipleChoiceAlt{{ taskorder.item.id }}">
-                                                        {% if multiplechoicetask.question %}
-                                                            <label for=multipleChoice>{{ multiplechoicetask.question }}</label>
-                                                        {% else %}
-                                                            <label for=multipleChoice>Svaralternativer:</label>
-                                                        {% endif %}
-                                                        <br>
-                                                        {% get_multiplechoice_options multiplechoicetask as options %}
-                                                        {% for option in options %}
-                                                            {% if multiplechoicetask.checkbox %}
-                                                                <label class="checkbox-inline"><input type="checkbox"
-                                                                                                      class="checkbox{{ taskorder.item.id }}"
-                                                                                                      value="{{ option.option }}">{{ option.option }}
-                                                                </label>
-                                                            {% else %}
-                                                                <label class="radio-inline"><input type="radio"
-                                                                                                   value="{{ option.option }}"
-                                                                                                   class="checkbox{{ taskorder.item.id }}"
-                                                                                                   name="{{ forloop.parentloop.counter }}choices{{ taskorder.item.id }}">{{ option.option }}
-                                                                </label>
-                                                            {% endif %}
-                                                        {% endfor %}
-                                                    </div>
-                                                    <hr>
-                                                {% endfor %}
-                                            </div>
-                                        {% endif %}
-
-                                        {% if taskorder.item.task.reasoning %}
-                                            <div id="reasoningdiv{{ taskorder.item.id }}">
-                                                <label for="reasoning{{ taskorder.item.id }}">
-                                                    {% if taskorder.item.task.reasoningText %}
-                                                        {{ taskorder.item.task.reasoningText }}{% else %}
-                                                        Begrunnelse{% endif %}</label>
-                                                <textarea class="form-control" id="reasoning{{ taskorder.item.id }}"
-                                                          rows="6"
-                                                          style="resize:vertical"
-                                                          placeholder="Begrunn svaret ditt..."></textarea>
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        {% else %}
-                            <div class="col-md-2 fulldiv"></div>
-                            <div class="col-md-8 col-sm-12 col-xs-12 fulldiv">
-                                <div class="panel panel-default">
-                                    <div class="panel-heading" id="tasktextdiv">
-                                        <textarea id="tasktext{{ taskorder.item.id }}">
-                                            <h4>{{ taskorder.item.task.text | safe }}</h4>
-                                        </textarea>
-                                    </div>
-                                    <div class="panel-body answerbody">
-                                        <textarea id="geolistener{{ forloop.counter }}" rows="6" hidden></textarea>
-                                        <input type="text" id="tasktimer{{ forloop.counter }}" hidden>
-                                        {% if taskorder.item.task.answertype == 1 %}
-                                            <div id="textanswerdiv{{ taskorder.item.id }}">
-                                                <label for="textanswer">Tekstsvar</label>
-                                                <textarea class="form-control" id="textanswer{{ taskorder.item.id }}"
-                                                          rows="6"
-                                                          style="resize:vertical"
-                                                          placeholder="Skriv svaret ditt her..."></textarea>
-                                            </div>
-                                        {% elif taskorder.item.task.answertype == 2 %}
-                                            <div id="optionsdiv{{ taskorder.item.id }}">
-                                                {% get_mutiplechoice taskorder.item.task as multiplechoicetasks %}
-                                                {% for multiplechoicetask in multiplechoicetasks %}
-                                                    <div id="{{ taskorder.item.id }}multipleChoiceAlt{{ forloop.counter }}"
-                                                         class="multipleChoiceAlt{{ taskorder.item.id }}">
-                                                        {% if multiplechoicetask.question %}
-                                                            <label for=multipleChoice>{{ multiplechoicetask.question }}</label>
-                                                        {% else %}
-                                                            <label for=multipleChoice>Svaralternativer:</label>
-                                                        {% endif %}
-                                                        <br>
-                                                        {% get_multiplechoice_options multiplechoicetask as options %}
-                                                        {% for option in options %}
-                                                            {% if multiplechoicetask.checkbox %}
-                                                                <label class="checkbox-inline"><input type="checkbox"
-                                                                                                      class="checkbox{{ taskorder.item.id }}"
-                                                                                                      value="{{ option.option }}">{{ option.option }}
-                                                                </label>
-                                                            {% else %}
-                                                                <label class="radio-inline"><input type="radio"
-                                                                                                   value="{{ option.option }}"
-                                                                                                   class="checkbox{{ taskorder.item.id }}"
-                                                                                                   name="{{ forloop.parentloop.counter }}choices{{ taskorder.item.id }}">{{ option.option }}
-                                                                </label>
-                                                            {% endif %}
-                                                        {% endfor %}
-                                                    </div>
-                                                    <hr>
-                                                {% endfor %}
-                                            </div>
-                                        {% endif %}
-
-                                        {% if taskorder.item.task.reasoning %}
-                                            <div id="reasoningdiv{{ taskorder.item.id }}">
-                                                <label for="reasoning">{% if taskorder.item.task.reasoningText %}
-                                                    {{ taskorder.item.task.reasoningText }}{% else %}
-                                                    Begrunnelse{% endif %}</label>
-                                                <textarea class="form-control" id="reasoning{{ taskorder.item.id }}"
-                                                          rows="6"
-                                                          style="resize:vertical"
-                                                          placeholder="Begrunn svaret ditt..."></textarea>
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        {% endif %}
+                        <div class="panel-body" style="max-height: 80vh; overflow: auto">
+                            <table class="table table-hover table-striped table-responsive" id="summarytable">
+                                <thead>
+                                <tr>
+                                    <th class="col-xs-2">Oppgave</th>
+                                    <th class="col-xs-8">Status</th>
+                                    <th class="col-xs-2">Gå til</th>
+                                </tr>
+                                </thead>
+                                <tbody class="tableBody">
+                                {% for item_summary in items %}
+                                    <tr id="summarytask{{ item_summary.id }}">
+                                        <td>Oppgave {{ forloop.counter }}</td>
+                                        <td id="status{{ item_summary.id }}">Status</td>
+                                        <td><a class="btn btn-default" onclick="goToTask({{ forloop.counter }})"><i
+                                                class="fa fa-arrow-right" aria-hidden="true"></i> Gå til
+                                            oppgave</a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
-            {% if forloop.last %}
-                <div class="section" data-anchor="summary2">
-                    <div id="summary" class="col-xs-12 container-fluid">
-                        <div class="panel panel-info">
-                            <div class="panel-heading" style="padding-top: 1px">
-                                <h3 class="text-center">Oppsummering</h3>
-                            </div>
-                            <div class="panel-body" style="max-height: 80vh; overflow: auto">
-                                <table class="table table-hover table-striped table-responsive" id="summarytable">
-                                    <thead>
-                                    <tr>
-                                        <th class="col-xs-2">Oppgave</th>
-                                        <th class="col-xs-8">Status</th>
-                                        <th class="col-xs-2">Gå til</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody class="tableBody">
-                                    {% for taskorder in test.taskorder_set.all %}
-                                        <tr id="summarytask{{ taskorder.item.id }}">
-                                            <td>Oppgave {{ forloop.counter }}</td>
-                                            <td id="status{{ taskorder.item.id }}">Status</td>
-                                            <td><a class="btn btn-default" onclick="goToTask({{ forloop.counter }})"><i
-                                                    class="fa fa-arrow-right" aria-hidden="true"></i> Gå til
-                                                oppgave</a>
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            {% endif %}
-        {% endfor %}
-    {% endif %}
-</div>
+        {% endif %}
+    {% endfor %}
 </div>
 
 </body>
@@ -564,7 +467,9 @@
     jQuery.fn.exists = function () {
         return jQuery(this).length > 0;
     };
+    var role = "{{ request.user.role }}";
     var geocount = document.getElementById('geocount').innerHTML;
+    var submitNow = false;
     var geoFinished = false;
     var onLeave = false;
     var goToNextTask = false;
@@ -572,44 +477,50 @@
     var start;
     var taskTimerStart;
     var taskcount = document.getElementById('taskcount').innerHTML;
-    var divheight = document.getElementById('tasktextdiv').clientHeight;
+    var panelheight = $('.panel-heading').outerHeight();
+    var navheight = 50;
+    var maxTaskHeight = (window.innerHeight - panelheight - navheight );
     for (var i = 0; i < taskcount; i++) {
         var div = $('#task' + (i + 1));
+        var tasktextPercent = 0.6;
         var itemid = div.data('itemid');
         tinymce.init({
             selector: '#tasktext' + itemid,
-            plugins: 'placeholder',
+            plugins: 'placeholder autoresize',
             content_css: '{% static 'tinymce/js/tinymce/plugins/equationeditor/mathquill.css'%}',
             toolbar: false,
             menubar: false,
             statusbar: false,
-            height: '' + (divheight - 50),
+            autoresize_max_height: maxTaskHeight * tasktextPercent,
+            autoresize_bottom_margin: 0,
             readonly: 1,
             body_id: 'tasktextID'
         });
         if ($(('#textanswer' + itemid)).exists()) {
             tinymce.init({
                 selector: '#textanswer' + itemid,
-                plugins: 'equationeditor  textcolor lists fullscreen autolink link tabfocus table placeholder',
+                plugins: 'equationeditor  textcolor lists fullscreen autolink link tabfocus table placeholder tabfocus',
                 content_css: '{% static 'tinymce/js/tinymce/plugins/equationeditor/mathquill.css'%}',
                 toolbar: [
                     'bold italic underline fontsizeselect | forecolor bullist numlist | subscript superscript equationeditor link table | fullscreen '
                 ],
                 statusbar: false,
                 fontsize_formats: '8pt 10pt 12pt 14pt 18pt',
+                tabfocus_elements: "#nextTaskBtn",
                 menubar: false
             });
         }
         if ($(('#reasoning' + itemid)).exists()) {
             tinymce.init({
                 selector: '#reasoning' + itemid,
-                plugins: 'equationeditor  textcolor lists fullscreen autolink link tabfocus table placeholder ',
+                plugins: 'equationeditor  textcolor lists fullscreen autolink link tabfocus table placeholder tabfocus',
                 content_css: '{% static 'tinymce/js/tinymce/plugins/equationeditor/mathquill.css'%}',
                 toolbar: [
                     'bold italic underline fontsizeselect | forecolor bullist numlist | subscript superscript equationeditor link table | fullscreen '
                 ],
                 statusbar: false,
-                fontsize_formats: '8pt 10pt 12pt 14pt 18pt',
+                fontsize_formats: '8pt 10pt 12pt 14pt 1 8pt',
+                tabfocus_elements: "nextTaskBtn",
                 menubar: false
             });
         }
@@ -618,9 +529,6 @@
      * This function runs when the document is ready.
      */
     $(document).ready(function () {
-        //$('.mathquill-embedded-latex').mathquill('write', '\\frac{d}{dx}');
-        //$('.mathquill-rendered-math').addClass('mathquill-embedded-latex');
-        //$('.mathquill-embedded-latex').mathquill();
         start = Date.now();
         var notGeo = parseInt(taskcount - geocount);
         var percent = ((geoloaded + notGeo) / taskcount) * 100;
@@ -668,6 +576,10 @@
                     $('#taskBtnList').scrollTo(document.getElementById("liOppgave" + parseInt(nextIndex - 1)));
                 }
                 if (strictOrder == 'False') {
+                    var btn = $('#nextTaskBtn');
+                    btn.removeClass('btn-success');
+                    btn.addClass('btn-primary');
+                    submitNow = false;
                     if (nextIndex == tasksnr) {
                         if (tasksnr == 2) {
                             $('#prevTaskBtn').attr('disabled', 'disabled');
@@ -682,20 +594,22 @@
                         $('#nextTaskBtnText').text('Neste Oppgave');
                     } else if (nextIndex == summary) {
                         checkTest();
-                        $('#nextTaskBtn').attr('disabled', 'disabled');
                         $('#prevTaskBtn').attr('disabled', false);
-                        $('#nextTaskBtnText').text('Oppsummering');
+                        var btn = $('#nextTaskBtn');
+                        $('#nextTaskBtnText').text('Send inn');
+                        btn.removeClass('btn-primary');
+                        btn.addClass('btn-success');
+                        submitNow = true;
+                        if (role !== "1") {
+                            btn.attr('disabled', true);
+                        }
                     } else {
                         $('#nextTaskBtn').attr('disabled', false);
                         $('#nextTaskBtnText').text('Neste Oppgave');
                         $('#prevTaskBtn').attr('disabled', false);
                     }
                 } else {
-                    if (nextIndex == tasksnr) {
-                        $('#nextTaskBtnText').text('Oppsummering');
-                    } else if (nextIndex == summary) {
-                        $('#sendBtn').attr('disabled', false);
-                    }
+                    submitNow = false;
                     var nextTask = index + 1;
                     if (direction == 'Up') {
                         return false;
@@ -746,6 +660,16 @@
                                         if (result) {
                                             goToNextTask = true;
                                             goToTask(index);
+                                            if (nextIndex == tasksnr) {
+                                                $('#nextTaskBtnText').text('Oppsummering');
+                                            } else if (nextIndex == summary) {
+                                                $('#sendBtn').attr('disabled', false);
+                                                var btn = $('#nextTaskBtn');
+                                                $('#nextTaskBtnText').text('Send inn');
+                                                btn.removeClass('btn-primary');
+                                                btn.addClass('btn-success');
+                                                submitNow = true;
+                                            }
                                         }
                                     }
                                 });
@@ -787,7 +711,11 @@
      * This function changes the fullpage.js-section to the section below the current one.
      */
     function nextTask() {
-        $('#fullpage').fullpage.moveSectionDown();
+        if (submitNow) {
+            submitTask();
+        } else {
+            $('#fullpage').fullpage.moveSectionDown();
+        }
     }
 
     /**
@@ -823,6 +751,11 @@
             $('#nextTaskBtn').click()
         }
     });
+    $(document).on('keydown', function (event) {
+        if (event.keyCode == 9) {   //tab pressed
+            event.preventDefault(); // stops its action
+        }
+    });
     $(document).bind('touchmove', function (e) {
         e.preventDefault();
         return false;
@@ -845,8 +778,8 @@
     var parameters;
 
     if (typeof window.innerWidth != 'undefined' && window.innerWidth > 1000) {
-        viewPortWidth = window.innerWidth * 0.49;
-        viewPortHeight = window.innerHeight * 0.7;
+        viewPortWidth = window.innerWidth * 0.5;
+        viewPortHeight = window.innerHeight * 0.9;
     }
 
     var applet = [];
@@ -941,6 +874,9 @@
         for (var i = 1; i <= taskcount; i++) {
             var div = $('#task' + i);
             var itemid = div.data('itemid');
+            var tasktextHeight = div.find('#tasktextdiv').outerHeight();
+            var answerHeight = maxTaskHeight - tasktextHeight - 20;
+            $('#answerdiv' + itemid).css('max-height', answerHeight + 'px');
             var geo = $('#base64' + i);
             var variables = geo.data('variables');
             if (variables) {
@@ -995,11 +931,16 @@
                 width = geo.data('width');
                 height = geo.data('height');
                 if (window.innerWidth > window.innerHeight) {
-                    var scaledWidth = (window.innerWidth * 0.49) / width;
-                    var scaledHeight = (window.innerHeight * 0.70) / height;
+                    var scaledWidth = (window.innerWidth * 0.5) / width;
+                    var scaledHeight = (window.innerHeight * 0.93) / height;
                 } else {
                     var scaledWidth = (window.innerWidth * 0.49) / width;
                     var scaledHeight = (window.innerHeight * 0.50) / height;
+                }
+                if (scaledWidth < scaledHeight) {
+                    scaledHeight = scaledWidth;
+                } else {
+                    scaledWidth = scaledHeight;
                 }
                 var appletContainerScaler = $('#applet_container' + i + ' .applet_scaler');
                 appletContainerScaler.css('transform', 'scale(' + scaledWidth + ',' + scaledHeight + ')');
@@ -1009,11 +950,6 @@
                 document.getElementById('ggbApplet' + i).setAttribute('data-scaley', scaledHeight);
             }
         }
-        var panelHeight = $('.panel-heading').height();
-        var navbarHeight = 50;
-        var colHeight = window.innerHeight - panelHeight - navbarHeight;
-        $('.fulldiv').css('height', colHeight + 'px');
-        $('.splitdiv').css('height', colHeight + 'px');
     }
 
     window.onresize = function (event) {
@@ -1024,8 +960,13 @@
                 var geo = $('#base64' + i);
                 width = geo.data('width');
                 height = geo.data('height');
-                var scaledWidth = (window.innerWidth * 0.49) / width;
-                var scaledHeight = (window.innerHeight * 0.70) / height;
+                var scaledWidth = (window.innerWidth * 0.5) / width;
+                var scaledHeight = (window.innerHeight * 0.93) / height;
+                if (scaledWidth < scaledHeight) {
+                    scaledHeight = scaledWidth;
+                } else {
+                    scaledWidth = scaledHeight;
+                }
                 appletContainerScaler.css('transform', 'scale(' + scaledWidth + ',' + scaledHeight + ')');
                 appletContainerScaler.css('-webkit-transform', 'scale(' + scaledWidth + ',' + scaledHeight + ')');
                 appletContainerScaler.css('-ms-transform', 'scale(' + scaledWidth + ',' + scaledHeight + ')');
@@ -1038,6 +979,16 @@
         var colHeight = window.innerHeight - panelHeight - navbarHeight;
         $('.col-md-6').css('height', colHeight + 'px');
     };
+
+    $('.inputs').change(function () {
+        var input = $(this);
+        var i = input.data('counter');
+        var value = input.val();
+        var inputnr = input.data('inputnr');
+        if (document.getElementById('base64' + i)) {
+            window["ggbApplet" + i].setValue("input" + inputnr, value);
+        }
+    });
 
 
     /**
@@ -1052,6 +1003,7 @@
             var taskflag = true;
             var textanswerbool = false;
             var reasoningbool = false;
+            var inputfieldbool = false;
             var multiplechoicebool = false;
             var div = $('#task' + (i + 1));
             var itemid = div.data('itemid');
@@ -1066,20 +1018,14 @@
             if ($('#optionsdiv' + itemid).exists()) {
                 multiplechoicebool = true;
             }
+            if ($('#inputfieldsdiv' + itemid).exists()) {
+                inputfieldbool = true
+            }
             var status = document.getElementById('status' + itemid);
             status.innerHTML = "";
             if (textanswerbool) {
                 if (textanswer.trim() == '' || textanswer == null || textanswer == '<div>&nbsp;</div>') {
                     status.innerHTML += "Mangler tekstsvar | ";
-                    status.parentNode.className = "danger";
-                    flag = false;
-                    taskflag = false;
-                }
-            }
-
-            if (reasoningbool) {
-                if (reasoning == '' || reasoning == null || reasoning == '<div>&nbsp;</div>') {
-                    status.innerHTML += "Mangler begrunnelse | ";
                     status.parentNode.className = "danger";
                     flag = false;
                     taskflag = false;
@@ -1103,6 +1049,29 @@
                 }
             }
 
+            if (inputfieldbool) {
+                var complete = true;
+                $('#inputfieldsdiv' + itemid + ' input[type=number]').each(function () {
+                    if (!$(this).val()) {
+                        complete = false;
+                    }
+                });
+                if (!complete) {
+                    status.innerHTML += "Mangler svar på inputfelt | ";
+                    status.parentNode.className = "danger";
+                    flag = false;
+                    taskflag = false;
+                }
+            }
+            if (reasoningbool) {
+                if (reasoning == '' || reasoning == null || reasoning == '<div>&nbsp;</div>') {
+                    status.innerHTML += "Mangler begrunnelse | ";
+                    status.parentNode.className = "danger";
+                    flag = false;
+                    taskflag = false;
+                }
+            }
+            status.innerHTML = status.innerHTML.slice(0, -2);
             if (taskflag) {
                 status.innerHTML = "Denne oppgaven har ingen mangler";
                 status.parentNode.className = "success";
@@ -1121,6 +1090,7 @@
         var textanswerbool = false;
         var reasoningbool = false;
         var multiplechoicebool = false;
+        var inputfieldbool = false;
         if ($(('#textanswer' + itemid)).exists()) {
             textanswerbool = true;
             var textanswer = tinyMCE.get('textanswer' + itemid).getContent();
@@ -1131,6 +1101,9 @@
         }
         if ($('#optionsdiv' + itemid).exists()) {
             multiplechoicebool = true;
+        }
+        if ($('#inputfieldsdiv' + itemid).exists()) {
+            inputfieldbool = true
         }
 
         if (textanswerbool) {
@@ -1156,6 +1129,17 @@
                 return false;
             }
 
+        }
+        if (inputfieldbool) {
+            var complete = true;
+            $('#inputfieldsdiv' + itemid + ' input[type=number]').each(function () {
+                if (!$(this).val()) {
+                    complete = false;
+                }
+            });
+            if (!complete) {
+                return false
+            }
         }
         return true;
     }
@@ -1191,7 +1175,7 @@
                 reasoning = tinyMCE.get('reasoning' + itemid).getContent();
 
             }
-            if ($('#optiondiv' + itemid)) {
+            if ($('#optionsdiv' + itemid).exists()) {
                 var length = $('.multipleChoiceAlt' + itemid).length;
                 for (var x = 1; x <= length; x++) {
                     var checked = $('#' + itemid + 'multipleChoiceAlt' + x + ' :input:checked');
@@ -1203,6 +1187,14 @@
                 }
                 textanswer2.value = textanswer2.value.slice(0, -7);
 
+            }
+            if ($('#inputfieldsdiv' + itemid).exists()) {
+                var answer = "";
+                $('#inputfieldsdiv' + itemid + " .inputs").each(function () {
+                    answer += $(this).val() + "|||||";
+                });
+                answer = answer.slice(0, -5);
+                textanswer2.value = answer;
             }
             var reasoning2 = document.getElementById('id_task' + i + '-reasoning');
             var base64;
@@ -1225,7 +1217,7 @@
             var tab = (geolistener.value).split('\n');
             var timetab = [];
             var output = [];
-            var desctab = [];
+            var desctab = [];
 
             for (var z = 0; z < tab.length - 1; z++) {
                 var tab2 = tab[z].split('|');
@@ -1251,7 +1243,11 @@
                 }
             }
             geogebradata.value = geolistener.value;
-            timespent2.value = parseFloat(timespent);
+            if (timespent) {
+                timespent2.value = parseFloat(timespent);
+            } else {
+                timespent2.value = 0;
+            }
             if (typeof textanswer !== 'undefined') {
                 textanswer2.value = textanswer;
             }
@@ -1266,6 +1262,7 @@
                 base642.value = base64;
             }
         }
+
         $('#submitbutton').click();
         submit = true;
     }

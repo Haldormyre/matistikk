@@ -1,5 +1,6 @@
 from django import template
-from maths.models import Answer, GeogebraAnswer, MultipleChoiceTask, GeogebraTask, MultipleChoiceOption
+from maths.models import Answer, GeogebraAnswer, MultipleChoiceTask, GeogebraTask, MultipleChoiceOption, \
+    InputFieldTask, Directory
 from administration.models import Gruppe, Person, Grade
 
 register = template.Library()
@@ -54,8 +55,11 @@ def get_mutiplechoice(task):
 
 
 @register.simple_tag
-def get_multiplechoice_options(multiplechoice_task):
-    return MultipleChoiceOption.objects.filter(MutipleChoiceTask=multiplechoice_task)
+def get_multiplechoice_options_length(multiplechoice_task):
+    length = 0
+    for option in multiplechoice_task.multiplechoiceoption_set.all():
+        length += (len(option.option))
+    return length
 
 
 @register.simple_tag
@@ -131,3 +135,29 @@ def insert_params(text, variables):
     for i in range(len(variablesTable)):
         text = text.replace('matistikkParameter'+str(i+1), variablesTable[i])
     return text
+
+
+@register.simple_tag
+def get_inputfields(task):
+    return InputFieldTask.objects.filter(task=task)
+
+
+@register.simple_tag
+def get_input(answer, nr):
+    answer_list = answer.split('|||||')
+    return answer_list[nr-1]
+
+
+@register.simple_tag
+def get_margin(fraction):
+    if fraction:
+        return 0
+    else:
+        return 10
+
+
+@register.simple_tag
+def get_directory_path(directory_id):
+    directory = Directory.objects.get(id=directory_id)
+    return directory.__str__()
+

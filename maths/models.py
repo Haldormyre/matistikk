@@ -22,6 +22,36 @@ class Category(models.Model):
         return self.category_title
 
 
+class Directory(models.Model):
+    name = models.CharField(max_length=500)
+    parent_directory = models.ForeignKey('self', blank=True, null=True)
+    date_created = models.DateTimeField()
+    author = models.ForeignKey(Person, null=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        path_tab = self.path()
+        path = ""
+        for name in path_tab:
+            path += name + " / "
+        return path + self.name
+
+    def path(self):
+        path = []
+        parent = True
+        if self.parent_directory:
+            parent_directory = self.parent_directory
+            while parent:
+                if parent_directory:
+                    path.insert(0, parent_directory.name)
+                    parent_directory = parent_directory.parent_directory
+                else:
+                    parent = False
+        return path
+
+
 class Task(models.Model):
     """The base of a task
 
@@ -34,7 +64,7 @@ class Task(models.Model):
     :category: Which categories fits the task. 
     """
     title = models.CharField(max_length=100, default="")
-    text = models.TextField(max_length=20000, blank=True)
+    text = models.TextField(max_length=15000, blank=True)
     answertype = models.IntegerField()
     reasoning = models.BooleanField()
     reasoningText = models.CharField(max_length=1000, blank=True)
@@ -43,12 +73,21 @@ class Task(models.Model):
     variableDescription = models.CharField(max_length=10000, null=True, blank=True)
     author = models.ForeignKey(Person)
     category = models.ManyToManyField(Category)
+    directory = models.ForeignKey(Directory)
+    approved = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['-id']
 
     def __str__(self):
         return str(self.id) + " - " + self.title
+
+
+class TaskLog(models.Model):
+    text = models.TextField(max_length=1000, verbose_name='Kommentar...')
+    task = models.ForeignKey(Task)
+    author = models.ForeignKey(Person)
+    date = models.DateTimeField()
 
 
 class Item(models.Model):
@@ -64,14 +103,29 @@ class Item(models.Model):
 
 
 class InputFieldTask(models.Model):
+    task = models.ForeignKey(Task)
+    question = models.CharField(max_length=2000, null=True)
+
+    def __str__(self):
+        return self.task.__str__() + ": " + self.question
+
+
+class InputField(models.Model):
     """
     Input field for a task
 
-    :task: The task that the multiple choice options are for.
+    :inputFieldTask: The inputfieldtask that the inputfield is for.
     :title: The title for the inputfield.
     """
-    task = models.ForeignKey(Task)
-    title = models.CharField(max_length=200)
+    inputFieldTask = models.ForeignKey(InputFieldTask)
+    title = models.CharField(max_length=200, blank=True)
+    inputnr = models.IntegerField(null=True)
+    inputlength = models.IntegerField(default=10)
+    correct = models.CharField(max_length=100, null=True, blank=True)
+    fraction = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.inputFieldTask.__str__() + " - " + self.title
 
 
 class MultipleChoiceTask(models.Model):
@@ -170,6 +224,9 @@ class Test(models.Model):
     def __str__(self):
         return self.task_collection.test_name
 
+    def get_absolute_url(self):
+        return reverse('maths:testDetail', kwargs={'test_pk': self.id})
+
 
 class TaskOrder(models.Model):
     """
@@ -200,8 +257,8 @@ class Answer(models.Model):
     test = models.ForeignKey(Test)
     user = models.ForeignKey(Person, null=True)
     anonymous_user = models.IntegerField(null=True)
-    reasoning = models.CharField(max_length=20000, null=True)
-    text = models.CharField(max_length=20000, null=True)
+    reasoning = models.CharField(max_length=6000, null=True)
+    text = models.CharField(max_length=6000, null=True)
     date_answered = models.DateTimeField(null=True)
     timespent = models.FloatField(null=True)
     correct = models.CharField(max_length=100, null=True, default=None)

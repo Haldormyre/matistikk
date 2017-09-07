@@ -1,5 +1,5 @@
 from django import forms
-from .models import Task, Category, MultipleChoiceTask, GeogebraTask, Test, Answer
+from .models import Task, Category, MultipleChoiceTask, GeogebraTask, Test, Answer, TaskLog
 from administration.models import Person, Grade, School, Gruppe
 from django.forms import inlineformset_factory
 
@@ -37,6 +37,11 @@ class CreateTaskForm(forms.ModelForm):
     questions = forms.CharField(max_length=100000, required=False)
     correct = forms.CharField(max_length=100000, required=False)
     variables = forms.CharField(max_length=500, required=False)
+    inputQuestion = forms.CharField(max_length=500, required=False)
+    inputField = forms.CharField(max_length=500, required=False)
+    inputLength = forms.CharField(max_length=500, required=False)
+    inputCorrect = forms.CharField(max_length=500, required=False)
+    inputFraction = forms.CharField(max_length=500, required=False)
     height = forms.CharField(max_length=100, required=False)
     width = forms.CharField(max_length=100, required=False)
     showMenuBar = forms.BooleanField(initial=False, required=False)
@@ -51,7 +56,7 @@ class CreateTaskForm(forms.ModelForm):
         """
         model = Task
         fields = ['title', 'text', 'answertype', 'extra', 'reasoning', 'category', 'variableDescription',
-                  'reasoningText']
+                  'reasoningText', 'directory']
 
 
 class CreateCategoryForm(forms.ModelForm):
@@ -67,6 +72,13 @@ class CreateCategoryForm(forms.ModelForm):
         """
         model = Category
         fields = ['category_title']
+
+
+class CreateTaskLog(forms.ModelForm):
+
+    class Meta:
+        model = TaskLog
+        fields = ['text']
 
 
 class CreateTestForm(forms.ModelForm):
