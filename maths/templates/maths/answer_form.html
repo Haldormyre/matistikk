@@ -125,7 +125,8 @@
     {% for item in items %}
         <div class="section" data-anchor="oppgave{{ forloop.counter }}">
             <div id="task{{ forloop.counter }}" class="col-xs-12 col-md-12 col-sm-12 container-fluid"
-                 data-itemid="{{ item.id }}">
+                 data-itemid="{{ item.id }}" data-answertype="{{ item.task.answertype }}"
+                 data-reasoning="{{ item.task.reasoning }}">
                 <div class="panel panel-info">
 
                     {% if forloop.first %}
@@ -143,27 +144,24 @@
                                data-enableRightClick="{{ geogebratask.enableRightClick }}"
                                value="{{ geogebratask.base64 }}" hidden>
                         <div class="col-md-6 col-sm-6 col-xs-6 col-lg-6">
-                            <div id="applet_container{{ forloop.counter }}"></div>
-                        </div>
-                        <div class="col-md-6 col-sm-6 col-xs-6 col-lg-6">
                             <div class="panel panel-default">
                                 <div class="panel-heading" style="padding-top: 1px; padding-bottom: 1px;">
                                     <h4 class="text-center tasktitle">Oppgave {{ forloop.counter }}</h4>
                                 </div>
-                                <div class="panel-body">
+                                <div class="panel-body" style="padding: 10px">
                                     <div class="" id="tasktextdiv">
                                         <textarea id="tasktext{{ item.id }}" style="cursor:pointer;">
                                             {% if item.task.variableTask %}
                                                 {% insert_params item.task.text item.variables as text %}
-                                                {{ text | safe }}
+                                                {{ text }}
                                             {% else %}
-                                                {{ item.task.text | safe }}
+                                                {{ item.task.text }}
                                             {% endif %}
                                         </textarea>
                                     </div>
                                     <textarea id="geolistener{{ forloop.counter }}" rows="6" hidden></textarea>
                                     <input type="text" id="tasktimer{{ forloop.counter }}" hidden>
-                                    <div id="answerdiv{{ item.id }}" style="overflow: auto;">
+                                    <div id="answerdiv{{ item.id }}" style="overflow: auto">
                                         {% if item.task.answertype == 1 %}
                                             <div id="textanswerdiv{{ item.id }}" style="padding-top: 10px;">
                                                 <label for="textanswer{{ item.id }}">Tekstsvar</label>
@@ -231,7 +229,7 @@
                                                     <form class="form-horizontal">
                                                         {% for inputs in inputfield.inputfield_set.all %}
                                                             <div class="form-group"
-                                                                 style="margin-bottom: {% get_margin inputs.fraction %}px;">
+                                                                 style="margin-bottom: {% get_margin inputs.fraction %}px; margin-right: 0px; margin-left: 0px;">
                                                                 <label
                                                                         style="text-align: left; padding-left: 15px; height: auto"
                                                                         class="control-label col-md-2">{{ inputs.title }}:</label>
@@ -271,6 +269,9 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="col-md-6 col-sm-6 col-xs-6 col-lg-6">
+                            <div id="applet_container{{ forloop.counter }}"></div>
+                        </div>
                     {% else %}
                         <div class="col-md-2 fulldiv"></div>
                         <div class="col-md-8 col-sm-12 col-xs-12 fulldiv">
@@ -278,7 +279,7 @@
                                 <div class="panel-heading" style="padding-top: 1px; padding-bottom: 1px;">
                                     <h4 class="text-center tasktitle">Oppgave {{ forloop.counter }}</h4>
                                 </div>
-                                <div class="panel-body">
+                                <div class="panel-body" style="padding: 10px">
                                     <div id="tasktextdiv">
                                         <textarea id="tasktext{{ item.id }}">
                                             <h4>{{ item.task.text | safe }}</h4>
@@ -289,8 +290,8 @@
                                     <div id="answerdiv{{ item.id }}" style="overflow: auto;">
 
                                         {% if item.task.answertype == 1 %}
-                                            <div id="textanswerdiv{{ item.id }}" style="padding-top: 10px;>
-                                                <label for="textanswer">Tekstsvar</label>
+                                            <div id="textanswerdiv{{ item.id }}" style="padding-top: 10px;">
+                                                <label for="textanswer{{ item.id }}">Tekstsvar</label>
                                                 <textarea class="form-control" id="textanswer{{ item.id }}"
                                                           rows="6"
                                                           style="resize:vertical"
@@ -483,6 +484,11 @@
     for (var i = 0; i < taskcount; i++) {
         var div = $('#task' + (i + 1));
         var tasktextPercent = 0.6;
+        var reasoning = div.data('reasoning');
+        var answertype = div.data('answertype');
+        if (reasoning === 'False' && answertype === 3) {
+            tasktextPercent = 0.95;
+        }
         var itemid = div.data('itemid');
         tinymce.init({
             selector: '#tasktext' + itemid,
@@ -600,7 +606,7 @@
                         btn.removeClass('btn-primary');
                         btn.addClass('btn-success');
                         submitNow = true;
-                        if (role !== "1") {
+                        if (role === "2" || role === "3" || role === "4") {
                             btn.attr('disabled', true);
                         }
                     } else {
@@ -665,6 +671,9 @@
                                             } else if (nextIndex == summary) {
                                                 $('#sendBtn').attr('disabled', false);
                                                 var btn = $('#nextTaskBtn');
+                                                if (role === "2" || role === "3" || role === "4") {
+                                                    btn.attr('disabled', true);
+                                                }
                                                 $('#nextTaskBtnText').text('Send inn');
                                                 btn.removeClass('btn-primary');
                                                 btn.addClass('btn-success');
@@ -875,6 +884,7 @@
             var div = $('#task' + i);
             var itemid = div.data('itemid');
             var tasktextHeight = div.find('#tasktextdiv').outerHeight();
+            var html = $.parseHTML(tinymce.get('tasktext' + itemid).getContent());
             var answerHeight = maxTaskHeight - tasktextHeight - 20;
             $('#answerdiv' + itemid).css('max-height', answerHeight + 'px');
             var geo = $('#base64' + i);
@@ -908,7 +918,6 @@
                 }
                 var itemVariables = document.getElementById('id_task' + parseInt(i - 1) + '-variables');
                 itemVariables.value = params.slice(0, -5);
-                var html = $.parseHTML(tinymce.get('tasktext' + itemid).getContent());
                 $(html).find(".mathquill-rendered-math .selectable").each(function () {
                     var test = "<span>" + $(this).text().substring(1, $(this).text().length - 1) + "</span>";
                     var latex = ($(test).mathquill().html());
@@ -2848,5 +2857,4 @@
         $('#geolistener30').append(time + " | Update: " + strVal + '\n');
     }
 </script>
-</body>
 </html>
